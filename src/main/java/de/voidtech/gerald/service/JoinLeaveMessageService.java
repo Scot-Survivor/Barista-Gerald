@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import main.java.de.voidtech.gerald.entities.JoinLeaveMessage;
-import main.java.de.voidtech.gerald.entities.WelcomeMessage;
 import main.java.de.voidtech.gerald.entities.Server;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
@@ -33,15 +32,6 @@ public class JoinLeaveMessageService {
 			return joinLeaveMessage != null;
 		}
 	}
-
-	private boolean customWelcomeMessageEnabled(long guildID) {
-		try (Session session = sessionFactory.openSession()) {
-			WelcomeMessage welcomeMessage = (WelcomeMessage) session.createQuery("FROM WelcomeMessage  WHERE guildID = :guildID")
-					.setParameter("guildID", guildID)
-					.uniqueResult();
-			return welcomeMessage != null;
-		}
-	}
 	
 	private JoinLeaveMessage getJoinLeaveMessageEntity(long guildID) {
 		try(Session session = sessionFactory.openSession())
@@ -52,31 +42,38 @@ public class JoinLeaveMessageService {
 			return joinLeaveMessage;
 		}
 	}
-
-	private WelcomeMessage getWelcomeMessageEntity(long guildID) {
-		try (Session session = sessionFactory.openSession()) {
-			WelcomeMessage welcomeMessage = (WelcomeMessage) session.createQuery("FROM WelcomeMessage WHERE guildID = :guildID")
-					.setParameter("guildID", guildID)
-					.uniqueResult();
-			return welcomeMessage;
-		}
-	}
 	
 	public void sendJoinMessage(GuildMemberJoinEvent event) {
 		Server server = serverService.getServer(event.getGuild().getId());
 		if (customJoinLeaveMessageEnabled(server.getId())) {
 			JoinLeaveMessage joinLeaveMessage = getJoinLeaveMessageEntity(server.getId());
-			GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
-			String message = joinLeaveMessage.getJoinMessage();
-			String member = event.getMember().getAsMention();
-			
-			MessageEmbed joinMessageEmbed = new EmbedBuilder()
-					.setColor(Color.green)
-					.setDescription(member + " **" + message + "**")
-					.setTimestamp(null)
-					.build();
-			
-			((MessageChannel) channel).sendMessage(joinMessageEmbed).queue();
+			if (!joinLeaveMessage.getMemberDM()) {
+				GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
+				String message = joinLeaveMessage.getJoinMessage();
+				String member = event.getMember().getAsMention();
+
+				MessageEmbed joinMessageEmbed = new EmbedBuilder()
+						.setColor(Color.green)
+						.setDescription(member + " **" + message + "**")
+						.setTimestamp(null)
+						.build();
+
+				((MessageChannel) channel).sendMessage(joinMessageEmbed).queue();
+			}
+			else {
+				String message = joinLeaveMessage.getJoinMessage();
+				String member = event.getUser().getAsMention();
+				User user = event.getUser();
+
+				MessageEmbed joinMessageEmbed = new EmbedBuilder()
+						.setColor(Color.green)
+						.setDescription(member + " **" + message + "**")
+						.setTimestamp(null)
+						.build();
+
+				user.openPrivateChannel().queue((channel) ->
+						channel.sendMessage(joinMessageEmbed).queue());
+			}
 		}
 	}
 	
@@ -84,34 +81,34 @@ public class JoinLeaveMessageService {
 		Server server = serverService.getServer(event.getGuild().getId());
 		if (customJoinLeaveMessageEnabled(server.getId())) {
 			JoinLeaveMessage joinLeaveMessage = getJoinLeaveMessageEntity(server.getId());
-			GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
-			String message = joinLeaveMessage.getLeaveMessage();
-			String member = event.getUser().getAsMention();
-			
-			MessageEmbed leaveMessageEmbed = new EmbedBuilder()
-					.setColor(Color.red)
-					.setDescription(member + " **" + message + "**")
-					.setTimestamp(null)
-					.build();
-			
-			((MessageChannel) channel).sendMessage(leaveMessageEmbed).queue();
-		}
-	}
+			if (!joinLeaveMessage.getMemberDM()) {
+				GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
+				String message = joinLeaveMessage.getLeaveMessage();
+				String member = event.getUser().getAsMention();
 
-	public void sendWelcomeDM(GuildMemberJoinEvent event) {
-		Server server = serverService.getServer(event.getGuild().getId());
-		if (customWelcomeMessageEnabled(server.getId())) {
-			WelcomeMessage welcomeMessage = getWelcomeMessageEntity(server.getId());
-			String message = welcomeMessage.getWelcomeMessage();
-			User user = event.getUser();
-			String mention = event.getUser().getAsMention();
-			MessageEmbed welcomeMessageEmbed = new EmbedBuilder()
-					.setColor(Color.ORANGE)
-					.setDescription(mention + " **" + message + "**")
-					.setTimestamp(null)
-					.build();
-			user.openPrivateChannel().queue((channel) ->
-					channel.sendMessage(welcomeMessageEmbed).queue());
+				MessageEmbed leaveMessageEmbed = new EmbedBuilder()
+						.setColor(Color.red)
+						.setDescription(member + " **" + message + "**")
+						.setTimestamp(null)
+						.build();
+
+				((MessageChannel) channel).sendMessage(leaveMessageEmbed).queue();
+			}
+			else {
+				String message = joinLeaveMessage.getLeaveMessage();
+				String member = event.getUser().getAsMention();
+				User user = event.getUser();
+
+				MessageEmbed leaveMessageEmbed = new EmbedBuilder()
+						.setColor(Color.red)
+						.setDescription(member + " **" + message + "**")
+						.setTimestamp(null)
+						.build();
+
+				user.openPrivateChannel().queue((channel) ->
+						channel.sendMessage(leaveMessageEmbed).queue());
+			}
+			}
 		}
 	}
 	
