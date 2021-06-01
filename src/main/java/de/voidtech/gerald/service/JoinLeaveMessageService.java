@@ -47,7 +47,7 @@ public class JoinLeaveMessageService {
 		Server server = serverService.getServer(event.getGuild().getId());
 		if (customJoinLeaveMessageEnabled(server.getId())) {
 			JoinLeaveMessage joinLeaveMessage = getJoinLeaveMessageEntity(server.getId());
-			if (!joinLeaveMessage.getMemberDM()) {
+			if (!joinLeaveMessage.getMemberDM() || event.getUser().isBot()) {
 				GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
 				String message = joinLeaveMessage.getJoinMessage();
 				String member = event.getMember().getAsMention();
