@@ -161,6 +161,7 @@ public class WelcomerCommand extends AbstractCommand{
 					addJoinLeaveMessage(server.getId(), channel, welcomeMessage, leaveMessage, shouldDM);
 					message.getChannel().sendMessage("**The Welcomer has been set up!**\n\n"
 							+ "Channel: <#" + channel + ">\n"
+							+ "ShouldDM: " + shouldDM + "\n"
 							+ "Join message: " + welcomeMessage + "\n"
 							+ "Leave message: " + leaveMessage).queue();
 					
