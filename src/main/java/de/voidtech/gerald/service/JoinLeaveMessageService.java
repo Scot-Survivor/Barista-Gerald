@@ -81,33 +81,17 @@ public class JoinLeaveMessageService {
 		Server server = serverService.getServer(event.getGuild().getId());
 		if (customJoinLeaveMessageEnabled(server.getId())) {
 			JoinLeaveMessage joinLeaveMessage = getJoinLeaveMessageEntity(server.getId());
-			if (!joinLeaveMessage.getMemberDM()) {
-				GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
-				String message = joinLeaveMessage.getLeaveMessage();
-				String member = event.getUser().getAsMention();
+			GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
+			String message = joinLeaveMessage.getLeaveMessage();
+			String member = event.getUser().getAsMention();
 
-				MessageEmbed leaveMessageEmbed = new EmbedBuilder()
-						.setColor(Color.red)
-						.setDescription(member + " **" + message + "**")
-						.setTimestamp(null)
-						.build();
+			MessageEmbed leaveMessageEmbed = new EmbedBuilder()
+					.setColor(Color.red)
+					.setDescription(member + " **" + message + "**")
+					.setTimestamp(null)
+					.build();
 
-				((MessageChannel) channel).sendMessage(leaveMessageEmbed).queue();
-			}
-			else {
-				String message = joinLeaveMessage.getLeaveMessage();
-				String member = event.getUser().getAsMention();
-				User user = event.getUser();
-
-				MessageEmbed leaveMessageEmbed = new EmbedBuilder()
-						.setColor(Color.red)
-						.setDescription(member + " **" + message + "**")
-						.setTimestamp(null)
-						.build();
-
-				user.openPrivateChannel().queue((channel) ->
-						channel.sendMessage(leaveMessageEmbed).queue());
-			}
+			((MessageChannel) channel).sendMessage(leaveMessageEmbed).queue();
 		}
 	}
 }
