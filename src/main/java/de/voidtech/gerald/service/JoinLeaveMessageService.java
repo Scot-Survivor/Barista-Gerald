@@ -108,8 +108,6 @@ public class JoinLeaveMessageService {
 				user.openPrivateChannel().queue((channel) ->
 						channel.sendMessage(leaveMessageEmbed).queue());
 			}
-			}
 		}
 	}
-	
 }
