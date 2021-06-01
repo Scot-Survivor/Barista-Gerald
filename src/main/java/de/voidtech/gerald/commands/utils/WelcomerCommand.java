@@ -128,6 +128,19 @@ public class WelcomerCommand extends AbstractCommand{
 			session.getTransaction().commit();
 		}
 	}
+
+	private void updateDMSetting(long guildId, boolean dmMessage, Message message) {
+		JoinLeaveMessage joinLeaveMessage = getJoinLeaveMessageEntity(guildId);
+
+		try (Session session = sessionFactory.openSession()) {
+			session.getTransaction().begin();
+
+			joinLeaveMessage.setMemberDM(dmMessage);
+
+			session.saveOrUpdate(joinLeaveMessage);
+			session.getTransaction().commit();
+		}
+	}
 	
 	private void clearWelcomer(Server server, Message message) {
 		if (customMessageEnabled(server.getId())) {
@@ -263,9 +276,23 @@ public class WelcomerCommand extends AbstractCommand{
 		}
 	}
 
-	private void changeDM(Server server, Message message, List<String> args) {
+	private void changeDM(Server server, Message message) {
 		if (customMessageEnabled(server.getId())) {
-
+			message.getChannel().sendMessage("**Do you want to DM members?**").queue((sentMessage) -> {
+				sentMessage.addReaction(checkmark).queue();
+				sentMessage.addReaction(crossmark).queue();
+				waiter.waitForEvent(MessageReactionAddEvent.class,
+						reactionMessageInputEvent -> Objects.requireNonNull(((MessageReactionAddEvent) reactionMessageInputEvent).getMember()).getId().equals(message.getAuthor().getId()),
+						reactionMessageInputEvent -> {
+							if (reactionMessageInputEvent.getReactionEmote().getName().equals(checkmark)){
+								updateDMSetting(server.getId(), true, message);
+							}
+							else if (!reactionMessageInputEvent.getReactionEmote().getName().equals(crossmark)) {
+								updateDMSetting(server.getId(), false, message);
+							}
+						}, 60, TimeUnit.SECONDS,
+						() -> message.getChannel().sendMessage("**No input has been supplied, cancelling.**").queue());
+			});
 		}
 	}
 	
@@ -293,6 +320,10 @@ public class WelcomerCommand extends AbstractCommand{
 		case "leavemsg":
 			changeLeaveMessage(server, message, args);
 			break;
+
+		case "dmmsg":
+			changeDM(server, message);
+			break;
 		}
 		
 	}
@@ -308,6 +339,7 @@ public class WelcomerCommand extends AbstractCommand{
 				+ "welcomer channel #welcome-new-members (to change the channel)\n\n"
 				+ "welcomer joinmsg welcome to our server! (to change the welcome message)\n\n"
 				+ "welcomer leavemsg we will miss you! (to change the leave message)\n\n"
+				+ "welcome dmmsg DM's the messages (to change this setting)\n\n"
 				+ "welcomer clear";
 	}
 
