@@ -268,7 +268,7 @@ public class WelcomerCommand extends AbstractCommand{
 
 	@Override
 	public String getDescription() {
-		return "This command allows you to set up a customiseable join/leave message system. Simply choose a channel, join message and leave message and you're ready! Note: You MUST seperate the arguments for this command with a dash (-) See usage for details";
+		return "This command allows you to set up a customisable join/leave message system. Simply choose a channel, join message and leave message and you're ready! Note: You MUST seperate the arguments for this command with a dash (-) See usage for details";
 	}
 
 	@Override
