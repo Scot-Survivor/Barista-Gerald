@@ -59,6 +59,10 @@ public class JoinLeaveMessage {
 	public void setMemberDM(boolean memberDM) {
 		this.memberDM = memberDM;
 	}
+
+	public boolean getMemberDM() {
+		return memberDM;
+	}
 	
 	public String getChannelID() {
 		return channelID;
