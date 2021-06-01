@@ -25,19 +25,23 @@ public class JoinLeaveMessage {
 	private String joinMessage; 
 	
 	@Column
-	private String leaveMessage; 
+	private String leaveMessage;
+
+	@Column
+	private boolean memberDM;
 	
 	@Deprecated
 	//ONLY FOR HIBERNATE, DO NOT USE
 	JoinLeaveMessage() {
 	}
 	
-	public JoinLeaveMessage(long serverID, String channelID, String joinMessage, String leaveMessage)
+	public JoinLeaveMessage(long serverID, String channelID, String joinMessage, String leaveMessage, boolean memberDM)
 	{
 		this.serverID = serverID;
 		this.channelID = channelID;
 	    this.joinMessage = joinMessage;
 	    this.leaveMessage = leaveMessage;
+	    this.memberDM = memberDM;
 	}
 	
 	public void setServerID(long serverID) {
@@ -50,6 +54,10 @@ public class JoinLeaveMessage {
 	
 	public void setChannelID(String channelID) {
 		this.channelID = channelID;
+	}
+
+	public void setMemberDM(boolean memberDM) {
+		this.memberDM = memberDM;
 	}
 	
 	public String getChannelID() {
