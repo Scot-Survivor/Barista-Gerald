@@ -1,8 +1,11 @@
 package main.java.de.voidtech.gerald.commands.utils;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.events.message.react.MessageReactionAddEvent;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +34,9 @@ public class WelcomerCommand extends AbstractCommand{
 	
 	@Autowired
 	private EventWaiter waiter;
+
+	private static final String checkmark = "✅";
+	private static final String crossmark = "❌";
 
 	private boolean customMessageEnabled(long guildID) {
 		try(Session session = sessionFactory.openSession())
@@ -62,11 +68,11 @@ public class WelcomerCommand extends AbstractCommand{
 		}
 	}
 	
-	private void addJoinLeaveMessage(long serverID, String channel, String joinMessage, String leaveMessage) {
+	private void addJoinLeaveMessage(long serverID, String channel, String joinMessage, String leaveMessage, boolean shouldDM) {
 		try (Session session = sessionFactory.openSession()) {
 			session.getTransaction().begin();
 		
-			JoinLeaveMessage joinLeaveMessage = new JoinLeaveMessage(serverID, channel, joinMessage, leaveMessage);
+			JoinLeaveMessage joinLeaveMessage = new JoinLeaveMessage(serverID, channel, joinMessage, leaveMessage, shouldDM);
 			
 			session.saveOrUpdate(joinLeaveMessage);
 			session.getTransaction().commit();
@@ -132,14 +138,14 @@ public class WelcomerCommand extends AbstractCommand{
 		}
 	}
 	
-	private void continueToLeaveMessage(Message message, Server server, String channel, String welcomeMessage) {
+	private void continueToLeaveMessage(Message message, Server server, String channel, String welcomeMessage, boolean shouldDM) {
 		message.getChannel().sendMessage("**Please enter your leave message:**").queue();
 		waiter.waitForEvent(MessageReceivedEvent.class,
 				leaveMessageInputEvent -> ((MessageReceivedEvent) leaveMessageInputEvent).getAuthor().getId().equals(message.getAuthor().getId()),
 				leaveMessageEvent -> {
 					String leaveMessage = leaveMessageEvent.getMessage().getContentRaw();
 					
-					addJoinLeaveMessage(server.getId(), channel, welcomeMessage, leaveMessage);
+					addJoinLeaveMessage(server.getId(), channel, welcomeMessage, leaveMessage, shouldDM);
 					message.getChannel().sendMessage("**The Welcomer has been set up!**\n\n"
 							+ "Channel: <#" + channel + ">\n"
 							+ "Join message: " + welcomeMessage + "\n"
@@ -150,15 +156,33 @@ public class WelcomerCommand extends AbstractCommand{
 	}
 	
 	
-	private void continueToWelcomeMessage(Message message, Server server, String channel) {
+	private void continueToWelcomeMessage(Message message, Server server, String channel, boolean shouldDM) {
 		message.getChannel().sendMessage("**Please enter your welcome message:**").queue();
 		waiter.waitForEvent(MessageReceivedEvent.class,
 				welcomeMessageInputEvent -> ((MessageReceivedEvent) welcomeMessageInputEvent).getAuthor().getId().equals(message.getAuthor().getId()),
 				welcomeMessageInputEvent -> {
 					String welcomeMessage = welcomeMessageInputEvent.getMessage().getContentRaw();
-					continueToLeaveMessage(message, server, channel, welcomeMessage);
+					continueToLeaveMessage(message, server, channel, welcomeMessage, shouldDM);
 				}, 60, TimeUnit.SECONDS, 
 				() -> message.getChannel().sendMessage("**No input has been supplied, cancelling.**").queue());	
+	}
+
+	private void continueToDM(Message message, Server server, String channel) {
+		message.getChannel().sendMessage("**Do you want to DM members?**").queue((sentMessage) -> {
+			sentMessage.addReaction(checkmark).queue();
+			sentMessage.addReaction(crossmark).queue();
+			waiter.waitForEvent(MessageReactionAddEvent.class,
+					reactionMessageInputEvent -> Objects.requireNonNull(((MessageReactionAddEvent) reactionMessageInputEvent).getMember()).getId().equals(message.getAuthor().getId()),
+					reactionMessageInputEvent -> {
+						if (reactionMessageInputEvent.getReactionEmote().getName().equals(checkmark)){
+							continueToWelcomeMessage(message, server, channel, true);
+						}
+						else if (!reactionMessageInputEvent.getReactionEmote().getName().equals(crossmark)) {
+							continueToWelcomeMessage(message, server, channel, false);
+						}
+					}, 60, TimeUnit.SECONDS,
+					() -> message.getChannel().sendMessage("**No input has been supplied, cancelling.**").queue());
+		});
 	}
 	
 	private void beginSetup(Message message, Server server) {
@@ -170,7 +194,8 @@ public class WelcomerCommand extends AbstractCommand{
 					String channel = ParsingUtils.filterSnowflake(channelEntryEvent.getMessage().getContentRaw());
 					
 					if (channelExists(channel, message)) {
-						continueToWelcomeMessage(message, server, channel);
+						continueToDM(message, server, channel);
+						// continueToWelcomeMessage(message, server, channel);
 					} else {
 						message.getChannel().sendMessage("**You need to mention a channel or use its ID!**").queue();
 					}
@@ -235,6 +260,12 @@ public class WelcomerCommand extends AbstractCommand{
 
 		} else {
 			message.getChannel().sendMessage("**The Welcomer has not been set up yet! See below:\n\n**" + this.getUsage()).queue();
+		}
+	}
+
+	private void changeDM(Server server, Message message, List<String> args) {
+		if (customMessageEnabled(server.getId())) {
+
 		}
 	}
 	
