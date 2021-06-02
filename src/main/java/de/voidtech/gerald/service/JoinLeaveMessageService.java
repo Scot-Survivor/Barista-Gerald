@@ -42,37 +42,42 @@ public class JoinLeaveMessageService {
 			return joinLeaveMessage;
 		}
 	}
-	
+
+	private void sendPrivateJoinMessage(GuildMemberJoinEvent event, JoinLeaveMessage joinLeaveMessage) {
+		String message = joinLeaveMessage.getJoinMessage();
+		String member = event.getUser().getAsMention();
+		User user = event.getUser();
+
+		MessageEmbed joinMessageEmbed = new EmbedBuilder()
+				.setColor(Color.green)
+				.setDescription(member + " **" + message + "**")
+				.setTimestamp(null)
+				.build();
+
+		user.openPrivateChannel().queue((channel) ->
+				channel.sendMessage(joinMessageEmbed).queue());
+	}
+
+	private void sendPublicJoinMessage(GuildMemberJoinEvent event, JoinLeaveMessage joinLeaveMessage) {
+		GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
+		String message = joinLeaveMessage.getJoinMessage();
+		String member = event.getMember().getAsMention();
+
+		MessageEmbed joinMessageEmbed = new EmbedBuilder()
+				.setColor(Color.green)
+				.setDescription(member + " **" + message + "**")
+				.setTimestamp(null)
+				.build();
+
+		((MessageChannel) channel).sendMessage(joinMessageEmbed).queue();
+	}
+
 	public void sendJoinMessage(GuildMemberJoinEvent event) {
 		Server server = serverService.getServer(event.getGuild().getId());
 		if (customJoinLeaveMessageEnabled(server.getId())) {
 			JoinLeaveMessage joinLeaveMessage = getJoinLeaveMessageEntity(server.getId());
-			if (!joinLeaveMessage.getMemberDM() || event.getUser().isBot()) {
-				GuildChannel channel = event.getJDA().getGuildChannelById(joinLeaveMessage.getChannelID());
-				String message = joinLeaveMessage.getJoinMessage();
-				String member = event.getMember().getAsMention();
-
-				MessageEmbed joinMessageEmbed = new EmbedBuilder()
-						.setColor(Color.green)
-						.setDescription(member + " **" + message + "**")
-						.setTimestamp(null)
-						.build();
-
-				((MessageChannel) channel).sendMessage(joinMessageEmbed).queue();
-			}
-			else {
-				String message = joinLeaveMessage.getJoinMessage();
-				String member = event.getUser().getAsMention();
-				User user = event.getUser();
-
-				MessageEmbed joinMessageEmbed = new EmbedBuilder()
-						.setColor(Color.green)
-						.setDescription(member + " **" + message + "**")
-						.setTimestamp(null)
-						.build();
-
-				user.openPrivateChannel().queue((channel) ->
-						channel.sendMessage(joinMessageEmbed).queue());
+			if (!joinLeaveMessage.isMemberDM() || event.getUser().isBot()) {
+				sendPublicJoinMessage(event, joinLeaveMessage);
 			}
 		}
 	}
